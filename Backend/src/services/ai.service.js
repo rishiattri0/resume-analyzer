@@ -68,7 +68,8 @@ async function generatePdfFromHtml(htmlContent) {
     if (process.env.VERCEL) {
         const chromiumModule = await import("@sparticuz/chromium")
         const chromium = chromiumModule.default || chromiumModule
-        const puppeteerCore = require("puppeteer-core")
+        const puppeteerModule = await import("puppeteer-core")
+        const puppeteerCore = puppeteerModule.default || puppeteerModule
         browser = await puppeteerCore.launch({
             args: chromium.args,
             defaultViewport: chromium.defaultViewport,
