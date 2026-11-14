@@ -5,13 +5,20 @@ const cors = require("cors")
 const app = express()
 
 app.use((req, res, next) => {
-    if (req.url === "/api/debug") {
-        return res.json({ body: req.body, type: typeof req.body, hasBody: !!req.body, headers: req.headers })
-    }
-    if (req.body && typeof req.body === "object" && !Buffer.isBuffer(req.body)) {
+    if (req.method !== "POST" && req.method !== "PUT" && req.method !== "PATCH") {
         return next()
     }
-    express.json()(req, res, next)
+    let data = ""
+    req.on("data", (chunk) => { data += chunk })
+    req.on("end", () => {
+        try {
+            req.body = data ? JSON.parse(data) : {}
+        } catch (e) {
+            req.body = {}
+        }
+        next()
+    })
+    req.on("error", next)
 })
 app.use(cookieParser())
 app.use(cors({
