@@ -66,7 +66,8 @@ async function generateInterviewReport({ resume, selfDescription, jobDescription
 async function generatePdfFromHtml(htmlContent) {
     let browser
     if (process.env.VERCEL) {
-        const chromium = require("@sparticuz/chromium")
+        const chromiumModule = await import("@sparticuz/chromium")
+        const chromium = chromiumModule.default || chromiumModule
         const puppeteerCore = require("puppeteer-core")
         browser = await puppeteerCore.launch({
             args: chromium.args,
