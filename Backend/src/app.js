@@ -4,7 +4,12 @@ const cors = require("cors")
 
 const app = express()
 
-app.use(express.json())
+app.use((req, res, next) => {
+    if (req.body && typeof req.body === "object" && !Buffer.isBuffer(req.body)) {
+        return next()
+    }
+    express.json()(req, res, next)
+})
 app.use(cookieParser())
 app.use(cors({
     origin: process.env.FRONTEND_URL || "http://localhost:5173",
