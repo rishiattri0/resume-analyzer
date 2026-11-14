@@ -1,6 +1,25 @@
-const app = require("../src/app")
-const connectToDB = require("../src/config/database")
+let app
+let connectToDB
+try {
+    app = require("../src/app")
+    connectToDB = require("../src/config/database")
+} catch (err) {
+    module.exports = (req, res) => {
+        res.status(500).json({ error: "Require failed", message: err && err.message, stack: err && err.stack })
+    }
+    return
+}
 
-connectToDB()
+try {
+    connectToDB()
+} catch (err) {
+    // ignore
+}
 
-module.exports = app
+module.exports = (req, res) => {
+    try {
+        return app(req, res)
+    } catch (err) {
+        res.status(500).json({ error: "Handler failed", message: err && err.message, stack: err && err.stack })
+    }
+}
