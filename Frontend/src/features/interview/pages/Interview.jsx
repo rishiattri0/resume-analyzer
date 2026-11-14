@@ -60,6 +60,8 @@ const RoadMapDay = ({ day }) => (
 // ── Main Component ────────────────────────────────────────────────────────────
 const Interview = () => {
     const [ activeNav, setActiveNav ] = useState('technical')
+    const [ leftOpen, setLeftOpen ] = useState(false)
+    const [ rightOpen, setRightOpen ] = useState(false)
     const { report, getReportById, loading, getResumePdf } = useInterview()
     const { interviewId } = useParams()
 
@@ -88,17 +90,22 @@ const Interview = () => {
         <>
             <Navbar />
             <div className='interview-page'>
+            <div className='mobile-toolbar'>
+                <button className='mobile-toggle' onClick={() => setLeftOpen(true)}>Sections</button>
+                <button className='mobile-toggle' onClick={() => setRightOpen(true)}>Score & Gaps</button>
+            </div>
             <div className='interview-layout'>
 
                 {/* ── Left Nav ── */}
-                <nav className='interview-nav'>
+                <nav className={`interview-nav ${leftOpen ? 'open' : ''}`}>
                     <div className="nav-content">
+                        <button className='drawer-close' onClick={() => setLeftOpen(false)} aria-label='Close sections'>✕</button>
                         <p className='interview-nav__label'>Sections</p>
                         {NAV_ITEMS.map(item => (
                             <button
                                 key={item.id}
                                 className={`interview-nav__item ${activeNav === item.id ? 'interview-nav__item--active' : ''}`}
-                                onClick={() => setActiveNav(item.id)}
+                                onClick={() => { setActiveNav(item.id); setLeftOpen(false); setRightOpen(false) }}
                             >
                                 <span className='interview-nav__icon'>{item.icon}</span>
                                 {item.label}
@@ -163,7 +170,9 @@ const Interview = () => {
                 <div className='interview-divider' />
 
                 {/* ── Right Sidebar ── */}
-                <aside className='interview-sidebar'>
+                <aside className={`interview-sidebar ${rightOpen ? 'open' : ''}`}>
+
+                    <button className='drawer-close' onClick={() => setRightOpen(false)} aria-label='Close score panel'>✕</button>
 
                     {/* Match Score */}
                     <div className='match-score'>
@@ -191,6 +200,7 @@ const Interview = () => {
 
                 </aside>
             </div>
+            {(leftOpen || rightOpen) && <div className='sidebar-overlay' onClick={() => { setLeftOpen(false); setRightOpen(false) }} />}
         </div>
         </>
     )

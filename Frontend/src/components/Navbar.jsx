@@ -31,7 +31,7 @@ const Navbar = () => {
         </Link>
         <nav style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           {user && (
-            <span style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
+            <span className="navbar-user" style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
               {user.username || user.email}
             </span>
           )}
