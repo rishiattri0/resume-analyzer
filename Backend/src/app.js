@@ -16,6 +16,10 @@ app.use(cors({
     credentials: true
 }))
 
+app.post("/api/debug", (req, res) => {
+    res.json({ body: req.body, contentType: req.headers["content-type"] })
+})
+
 /* require all the routes here */
 const authRouter = require("./routes/auth.routes")
 const interviewRouter = require("./routes/interview.routes")
