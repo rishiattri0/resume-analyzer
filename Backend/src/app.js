@@ -5,7 +5,11 @@ const cors = require("cors")
 const app = express()
 
 app.use((req, res, next) => {
+    const contentType = req.headers["content-type"] || ""
     if (req.method !== "POST" && req.method !== "PUT" && req.method !== "PATCH") {
+        return next()
+    }
+    if (!contentType.includes("application/json")) {
         return next()
     }
     let data = ""
