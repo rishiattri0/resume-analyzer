@@ -1,6 +1,7 @@
 const express = require("express")
 const cookieParser = require("cookie-parser")
 const cors = require("cors")
+const mongoose = require("mongoose")
 
 const app = express()
 
@@ -31,7 +32,23 @@ app.use(cors({
 }))
 
 app.get("/api/health", (req, res) => {
-    res.json({ ok: true, service: "interview-ai-backend", time: new Date().toISOString() })
+    res.json({
+        ok: true,
+        service: "interview-ai-backend",
+        db: mongoose.connection.readyState === 1 ? "connected" : "connecting",
+        time: new Date().toISOString()
+    })
+})
+
+const connectToDB = require("./config/database")
+
+app.use(async (req, res, next) => {
+    try {
+        await connectToDB()
+        next()
+    } catch (err) {
+        res.status(503).json({ message: "Database temporarily unavailable. Please retry in a moment." })
+    }
 })
 
 /* require all the routes here */

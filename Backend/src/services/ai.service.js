@@ -17,6 +17,29 @@ function getAI() {
 
 const MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite"
 
+function isRetryableAiError(err) {
+    const code = err?.status || err?.code || err?.error?.code || ""
+    const message = String(err?.message || "")
+    return code === 503 || code === 429 || code === "UNAVAILABLE" || code === "RESOURCE_EXHAUSTED" ||
+        /high demand|overloaded|temporar|try again/i.test(message)
+}
+
+async function generateWithRetry(request, attempts = 3) {
+    let lastError
+    for (let i = 0; i < attempts; i++) {
+        try {
+            return await getAI().models.generateContent(request)
+        } catch (err) {
+            lastError = err
+            if (i === attempts - 1 || !isRetryableAiError(err)) {
+                throw err
+            }
+            await new Promise((resolve) => setTimeout(resolve, 1500 * (i + 1)))
+        }
+    }
+    throw lastError
+}
+
 const interviewReportSchema = z.object({
     matchScore: z.number().describe("A score between 0 and 100 indicating how well the candidate's profile matches the job describe"),
     technicalQuestions: z.array(z.object({
@@ -51,7 +74,7 @@ async function generateInterviewReport({ resume, selfDescription, jobDescription
                         Include at least 5 days in the preparation plan.
 `
 
-    const response = await getAI().models.generateContent({
+    const response = await generateWithRetry({
         model: MODEL,
         contents: prompt,
         config: {
@@ -118,7 +141,7 @@ async function generateResumePdf({ resume, selfDescription, jobDescription }) {
                         The resume should not be so lengthy, it should ideally be 1-2 pages long when converted to PDF. Focus on quality rather than quantity and make sure to include all the relevant information that can increase the candidate's chances of getting an interview call for the given job description.
                     `
 
-    const response = await getAI().models.generateContent({
+    const response = await generateWithRetry({
         model: MODEL,
         contents: prompt,
         config: {

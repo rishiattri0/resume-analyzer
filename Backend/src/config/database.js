@@ -1,6 +1,6 @@
 const mongoose = require("mongoose")
 
-
+let connectionPromise = null
 
 async function connectToDB() {
 
@@ -9,14 +9,25 @@ async function connectToDB() {
         return
     }
 
-    try {
-        await mongoose.connect(process.env.MONGO_URI)
+    if (mongoose.connection.readyState === 1) {
+        return
+    }
 
-        console.log("Connected to Database")
+    if (!connectionPromise) {
+        connectionPromise = mongoose.connect(process.env.MONGO_URI, {
+            serverSelectionTimeoutMS: 8000,
+            maxPoolSize: 5
+        })
+            .then(() => {
+                console.log("Connected to Database")
+            })
+            .catch((err) => {
+                connectionPromise = null
+                throw err
+            })
     }
-    catch (err) {
-        console.log(err)
-    }
+
+    return connectionPromise
 }
 
 module.exports = connectToDB

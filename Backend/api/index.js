@@ -1,10 +1,7 @@
 const app = require("../src/app")
 const connectToDB = require("../src/config/database")
 
-try {
-    connectToDB()
-} catch (e) {
-    // ignore
-}
+// Warm up the database connection on cold start; requests also await it.
+connectToDB().catch(() => {})
 
 module.exports = app
