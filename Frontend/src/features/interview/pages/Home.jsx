@@ -7,7 +7,7 @@ import Navbar from '../../../components/Navbar.jsx'
 
 const Home = () => {
 
-    const { loading, generateReport,reports } = useInterview()
+    const { loading, generateReport, reports, error, getReports } = useInterview()
     const { handleLogout, user } = useAuth()
     const [ jobDescription, setJobDescription ] = useState("")
     const [ selfDescription, setSelfDescription ] = useState("")
@@ -46,6 +46,13 @@ const Home = () => {
                 <h1>Create Your Custom <span className='highlight'>Interview Plan</span></h1>
                 <p>Let our AI analyze the job requirements and your unique profile to build a winning strategy.</p>
             </header>
+
+            {error && (
+                <div className='error-banner' role='alert'>
+                    <p>{error}</p>
+                    <button type='button' className='error-banner__retry' onClick={() => getReports()}>Retry</button>
+                </div>
+            )}
 
             {/* Main Card */}
             <div className='interview-card'>

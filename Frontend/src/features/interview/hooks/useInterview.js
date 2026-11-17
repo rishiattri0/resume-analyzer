@@ -1,5 +1,5 @@
 import { getAllInterviewReports, generateInterviewReport, getInterviewReportById, generateResumePdf } from "../services/interview.api"
-import { useContext, useEffect } from "react"
+import { useContext, useEffect, useState } from "react"
 import { InterviewContext } from "../interview.context"
 import { useParams } from "react-router"
 
@@ -14,17 +14,21 @@ export const useInterview = () => {
     }
 
     const { loading, setLoading, report, setReport, reports, setReports } = context
+    const [ error, setError ] = useState("")
 
     const generateReport = async ({ jobDescription, selfDescription, resumeFile }) => {
         setLoading(true)
+        setError("")
         let response = null
         try {
             response = await generateInterviewReport({ jobDescription, selfDescription, resumeFile })
             if (response?.interviewReport) {
                 setReport(response.interviewReport)
+            } else {
+                setError("We couldn't generate your plan. The AI service may be busy — please try again in a moment.")
             }
         } catch (error) {
-            console.log(error)
+            setError("We couldn't generate your plan. Please check your connection and try again.")
         } finally {
             setLoading(false)
         }
@@ -34,14 +38,17 @@ export const useInterview = () => {
 
     const getReportById = async (interviewId) => {
         setLoading(true)
+        setError("")
         let response = null
         try {
             response = await getInterviewReportById(interviewId)
             if (response?.interviewReport) {
                 setReport(response.interviewReport)
+            } else {
+                setError("We couldn't load this interview plan. Please try again.")
             }
         } catch (error) {
-            console.log(error)
+            setError("We couldn't load this interview plan. Please check your connection and try again.")
         } finally {
             setLoading(false)
         }
@@ -50,14 +57,17 @@ export const useInterview = () => {
 
     const getReports = async () => {
         setLoading(true)
+        setError("")
         let response = null
         try {
             response = await getAllInterviewReports()
             if (response?.interviewReports) {
                 setReports(response.interviewReports)
+            } else {
+                setError("We couldn't load your saved plans. Please try again.")
             }
         } catch (error) {
-            console.log(error)
+            setError("We couldn't reach the server. Check your connection, then retry.")
         } finally {
             setLoading(false)
         }
@@ -67,6 +77,7 @@ export const useInterview = () => {
 
     const getResumePdf = async (interviewReportId) => {
         setLoading(true)
+        setError("")
         let response = null
         try {
             response = await generateResumePdf({ interviewReportId })
@@ -78,7 +89,7 @@ export const useInterview = () => {
             link.click()
         }
         catch (error) {
-            console.log(error)
+            setError("We couldn't download the resume. The AI service may be busy — please try again.")
         } finally {
             setLoading(false)
         }
@@ -92,6 +103,6 @@ export const useInterview = () => {
         }
     }, [ interviewId ])
 
-    return { loading, report, reports, generateReport, getReportById, getReports, getResumePdf }
+    return { loading, report, reports, error, setError, generateReport, getReportById, getReports, getResumePdf }
 
 }

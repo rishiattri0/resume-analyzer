@@ -30,6 +30,10 @@ app.use(cors({
     credentials: true
 }))
 
+app.get("/api/health", (req, res) => {
+    res.json({ ok: true, service: "interview-ai-backend", time: new Date().toISOString() })
+})
+
 /* require all the routes here */
 const authRouter = require("./routes/auth.routes")
 const interviewRouter = require("./routes/interview.routes")

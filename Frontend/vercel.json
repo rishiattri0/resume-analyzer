@@ -9,5 +9,11 @@
       "destination": "https://interview-ai-backend-theta.vercel.app/api/$1"
     },
     { "source": "/(.*)", "destination": "/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/index.html",
+      "headers": [{ "key": "Cache-Control", "value": "no-store, must-revalidate" }]
+    }
   ]
 }
