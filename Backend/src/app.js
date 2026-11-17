@@ -13,6 +13,10 @@ app.use((req, res, next) => {
     if (!contentType.includes("application/json")) {
         return next()
     }
+    // Some runtimes (Vercel) have already parsed the body for us.
+    if (req.body && typeof req.body === "object" && Object.keys(req.body).length > 0) {
+        return next()
+    }
     let data = ""
     req.on("data", (chunk) => { data += chunk })
     req.on("end", () => {
@@ -61,7 +65,21 @@ app.use("/api/auth", authRouter)
 app.use("/api/interview", interviewRouter)
 
 app.use((err, req, res, next) => {
-    res.status(500).json({ error: err && err.message, stack: err && err.stack })
+    console.error("Unhandled error:", err?.message || err)
+
+    if (err?.code === "LIMIT_FILE_SIZE") {
+        return res.status(413).json({ message: "That file is too large. Please upload a PDF under 3MB." })
+    }
+    if (err?.code === "LIMIT_UNEXPECTED_FILE") {
+        return res.status(400).json({ message: "Unexpected file upload. Please attach one resume PDF." })
+    }
+
+    const status = Number(err?.status || err?.statusCode) || 500
+    res.status(status).json({
+        message: status >= 500
+            ? "Something went wrong on our side. Please try again in a moment."
+            : (err?.message || "Request failed.")
+    })
 })
 
 

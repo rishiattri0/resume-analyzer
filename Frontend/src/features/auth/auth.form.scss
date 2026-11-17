@@ -77,3 +77,14 @@ button[type="submit"] {
 button[type="submit"]:hover {
   background: var(--accent-hover);
 }
+
+.form-error {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(248, 113, 113, 0.45);
+  background: rgba(248, 113, 113, 0.08);
+  border-radius: var(--radius-btn);
+  color: #fecaca;
+  font-size: 0.875rem;
+  line-height: 1.4;
+}

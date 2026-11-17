@@ -15,6 +15,7 @@ export const useInterview = () => {
 
     const { loading, setLoading, report, setReport, reports, setReports } = context
     const [ error, setError ] = useState("")
+    const [ downloading, setDownloading ] = useState(false)
 
     const generateReport = async ({ jobDescription, selfDescription, resumeFile }) => {
         setLoading(true)
@@ -27,8 +28,18 @@ export const useInterview = () => {
             } else {
                 setError("We couldn't generate your plan. The AI service may be busy — please try again in a moment.")
             }
-        } catch (error) {
-            setError("We couldn't generate your plan. Please check your connection and try again.")
+        } catch (err) {
+            const status = err?.response?.status
+            const message = err?.response?.data?.message
+            if (status === 401) {
+                setError("Your session expired. Please sign in again.")
+            } else if (status === 503 && message) {
+                setError(message)
+            } else if (status === 400 && message) {
+                setError(message)
+            } else {
+                setError("We couldn't generate your plan. Please check your connection and try again.")
+            }
         } finally {
             setLoading(false)
         }
@@ -47,8 +58,15 @@ export const useInterview = () => {
             } else {
                 setError("We couldn't load this interview plan. Please try again.")
             }
-        } catch (error) {
-            setError("We couldn't load this interview plan. Please check your connection and try again.")
+        } catch (err) {
+            const status = err?.response?.status
+            if (status === 401) {
+                setError("Your session expired. Please sign in again.")
+            } else if (status === 404) {
+                setError("This interview plan doesn't exist anymore.")
+            } else {
+                setError("We couldn't load this interview plan. Please check your connection and try again.")
+            }
         } finally {
             setLoading(false)
         }
@@ -66,8 +84,13 @@ export const useInterview = () => {
             } else {
                 setError("We couldn't load your saved plans. Please try again.")
             }
-        } catch (error) {
-            setError("We couldn't reach the server. Check your connection, then retry.")
+        } catch (err) {
+            const status = err?.response?.status
+            if (status === 401) {
+                setError("Your session expired. Please sign in again.")
+            } else {
+                setError("We couldn't reach the server. Check your connection, then retry.")
+            }
         } finally {
             setLoading(false)
         }
@@ -76,11 +99,10 @@ export const useInterview = () => {
     }
 
     const getResumePdf = async (interviewReportId) => {
-        setLoading(true)
         setError("")
-        let response = null
+        setDownloading(true)
         try {
-            response = await generateResumePdf({ interviewReportId })
+            const response = await generateResumePdf({ interviewReportId })
             const url = window.URL.createObjectURL(new Blob([ response ], { type: "application/pdf" }))
             const link = document.createElement("a")
             link.href = url
@@ -91,7 +113,7 @@ export const useInterview = () => {
         catch (error) {
             setError("We couldn't download the resume. The AI service may be busy — please try again.")
         } finally {
-            setLoading(false)
+            setDownloading(false)
         }
     }
 
@@ -103,6 +125,6 @@ export const useInterview = () => {
         }
     }, [ interviewId ])
 
-    return { loading, report, reports, error, setError, generateReport, getReportById, getReports, getResumePdf }
+    return { loading, downloading, report, reports, error, setError, generateReport, getReportById, getReports, getResumePdf }
 
 }

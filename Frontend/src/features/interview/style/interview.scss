@@ -17,6 +17,50 @@ $severity-low: #4ade80;
     display: none;
 }
 
+.sidebar-error {
+    margin: 10px 0 0;
+    padding: 8px 10px;
+    border: 1px solid rgba(248, 113, 113, 0.4);
+    background: rgba(248, 113, 113, 0.08);
+    border-radius: 8px;
+    color: #fecaca;
+    font-size: 0.78rem;
+    line-height: 1.4;
+}
+
+.load-error {
+    width: 100%;
+    max-width: 420px;
+    padding: 28px;
+    text-align: center;
+    background-color: $bg-card;
+    border: 1px solid $border-color;
+    border-radius: 12px;
+
+    h1 {
+        font-size: 1.25rem;
+        color: $text-primary;
+        margin: 0 0 10px;
+    }
+
+    p {
+        color: $text-muted;
+        font-size: 0.9rem;
+        line-height: 1.5;
+        margin: 0 0 20px;
+    }
+
+    &__actions {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+
+        .button {
+            width: 100%;
+        }
+    }
+}
+
 .interview-page {
     width: 100%;
     min-height: 100vh;

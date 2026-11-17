@@ -2,7 +2,12 @@ const pdfParse = require("pdf-parse")
 const { generateInterviewReport, generateResumePdf } = require("../services/ai.service")
 const interviewReportModel = require("../models/interviewReport.model")
 
-
+function isAiBusyError(err) {
+    const code = err?.status || err?.code || err?.error?.code || ""
+    const message = String(err?.message || "")
+    return code === 503 || code === 429 || code === "UNAVAILABLE" || code === "RESOURCE_EXHAUSTED" ||
+        /high demand|overloaded|temporar|try again/i.test(message)
+}
 
 
 /**
@@ -10,19 +15,51 @@ const interviewReportModel = require("../models/interviewReport.model")
  */
 async function generateInterViewReportController(req, res) {
 
-    const { selfDescription, jobDescription } = req.body
+    const jobDescription = String(req.body?.jobDescription || "").trim()
+    const selfDescription = String(req.body?.selfDescription || "").trim()
+
+    if (!jobDescription) {
+        return res.status(400).json({
+            message: "Please paste the target job description."
+        })
+    }
 
     let resumeText = ""
     if (req.file) {
-        const resumeContent = await pdfParse(req.file.buffer)
-        resumeText = resumeContent.text
+        try {
+            const resumeContent = await pdfParse(req.file.buffer)
+            resumeText = String(resumeContent.text || "").trim()
+        } catch (err) {
+            return res.status(400).json({
+                message: "We couldn't read that file. Please upload a PDF resume."
+            })
+        }
     }
 
-    const interViewReportByAi = await generateInterviewReport({
-        resume: resumeText,
-        selfDescription,
-        jobDescription
-    })
+    if (!resumeText && !selfDescription) {
+        return res.status(400).json({
+            message: "Upload a resume or add a quick self-description."
+        })
+    }
+
+    let interViewReportByAi
+    try {
+        interViewReportByAi = await generateInterviewReport({
+            resume: resumeText,
+            selfDescription,
+            jobDescription
+        })
+    } catch (err) {
+        console.error("Interview report generation failed:", err?.message || err)
+        if (isAiBusyError(err)) {
+            return res.status(503).json({
+                message: "The AI service is busy right now. Please try again in a moment."
+            })
+        }
+        return res.status(500).json({
+            message: "We couldn't generate your plan. Please try again."
+        })
+    }
 
     const interviewReport = await interviewReportModel.create({
         user: req.user.id,
@@ -80,7 +117,7 @@ async function getAllInterviewReportsController(req, res) {
 async function generateResumePdfController(req, res) {
     const { interviewReportId } = req.params
 
-    const interviewReport = await interviewReportModel.findById(interviewReportId)
+    const interviewReport = await interviewReportModel.findOne({ _id: interviewReportId, user: req.user.id })
 
     if (!interviewReport) {
         return res.status(404).json({
@@ -90,7 +127,20 @@ async function generateResumePdfController(req, res) {
 
     const { resume, jobDescription, selfDescription } = interviewReport
 
-    const pdfBuffer = await generateResumePdf({ resume, jobDescription, selfDescription })
+    let pdfBuffer
+    try {
+        pdfBuffer = await generateResumePdf({ resume, jobDescription, selfDescription })
+    } catch (err) {
+        console.error("Resume PDF generation failed:", err?.message || err)
+        if (isAiBusyError(err)) {
+            return res.status(503).json({
+                message: "The AI service is busy right now. Please try again in a moment."
+            })
+        }
+        return res.status(500).json({
+            message: "We couldn't build that PDF. Please try again."
+        })
+    }
 
     res.set({
         "Content-Type": "application/pdf",
