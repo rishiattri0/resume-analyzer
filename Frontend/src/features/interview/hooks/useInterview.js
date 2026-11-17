@@ -4,6 +4,40 @@ import { InterviewContext } from "../interview.context"
 import { useParams } from "react-router"
 
 
+function describeError(err, fallback) {
+    if (!err?.response) {
+        return {
+            message: `${fallback} The request never reached the server, so your network or a firewall is blocking it.`,
+            detail: "No response (network blocked or offline)"
+        }
+    }
+
+    const status = err.response.status
+    const serverMessage = err.response.data?.message
+
+    if (status === 401) {
+        return { message: "Your session expired. Please sign in again.", detail: "HTTP 401 (not signed in)" }
+    }
+    if (status === 413) {
+        return { message: serverMessage || "That file is too large. Please upload a PDF under 3MB.", detail: "HTTP 413 (file too large)" }
+    }
+    if (status === 503) {
+        return { message: serverMessage || "The AI service is busy right now. Please try again in a moment.", detail: "HTTP 503 (AI capacity)" }
+    }
+    if (status === 400) {
+        return { message: serverMessage || fallback, detail: "HTTP 400 (invalid request)" }
+    }
+    if (status === 404) {
+        return { message: serverMessage || "That plan could not be found.", detail: "HTTP 404 (not found)" }
+    }
+    return { message: serverMessage || fallback, detail: `HTTP ${status}` }
+}
+
+function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+
 export const useInterview = () => {
 
     const context = useContext(InterviewContext)
@@ -15,31 +49,43 @@ export const useInterview = () => {
 
     const { loading, setLoading, report, setReport, reports, setReports } = context
     const [ error, setError ] = useState("")
+    const [ errorDetail, setErrorDetail ] = useState("")
     const [ downloading, setDownloading ] = useState(false)
+
+    const fail = (err, fallback) => {
+        const described = describeError(err, fallback)
+        setError(described.message)
+        setErrorDetail(described.detail)
+    }
 
     const generateReport = async ({ jobDescription, selfDescription, resumeFile }) => {
         setLoading(true)
         setError("")
+        setErrorDetail("")
         let response = null
         try {
-            response = await generateInterviewReport({ jobDescription, selfDescription, resumeFile })
+            // One automatic retry when the AI model is briefly at capacity.
+            for (let attempt = 0; attempt < 2; attempt++) {
+                try {
+                    response = await generateInterviewReport({ jobDescription, selfDescription, resumeFile })
+                    break
+                } catch (err) {
+                    const busy = err?.response?.status === 503
+                    if (attempt === 0 && busy) {
+                        await sleep(2500)
+                        continue
+                    }
+                    throw err
+                }
+            }
             if (response?.interviewReport) {
                 setReport(response.interviewReport)
             } else {
                 setError("We couldn't generate your plan. The AI service may be busy — please try again in a moment.")
+                setErrorDetail("Server returned no report")
             }
         } catch (err) {
-            const status = err?.response?.status
-            const message = err?.response?.data?.message
-            if (status === 401) {
-                setError("Your session expired. Please sign in again.")
-            } else if (status === 503 && message) {
-                setError(message)
-            } else if (status === 400 && message) {
-                setError(message)
-            } else {
-                setError("We couldn't generate your plan. Please check your connection and try again.")
-            }
+            fail(err, "We couldn't generate your plan.")
         } finally {
             setLoading(false)
         }
@@ -50,6 +96,7 @@ export const useInterview = () => {
     const getReportById = async (interviewId) => {
         setLoading(true)
         setError("")
+        setErrorDetail("")
         let response = null
         try {
             response = await getInterviewReportById(interviewId)
@@ -57,16 +104,10 @@ export const useInterview = () => {
                 setReport(response.interviewReport)
             } else {
                 setError("We couldn't load this interview plan. Please try again.")
+                setErrorDetail("Server returned no report")
             }
         } catch (err) {
-            const status = err?.response?.status
-            if (status === 401) {
-                setError("Your session expired. Please sign in again.")
-            } else if (status === 404) {
-                setError("This interview plan doesn't exist anymore.")
-            } else {
-                setError("We couldn't load this interview plan. Please check your connection and try again.")
-            }
+            fail(err, "We couldn't load this interview plan.")
         } finally {
             setLoading(false)
         }
@@ -76,6 +117,7 @@ export const useInterview = () => {
     const getReports = async () => {
         setLoading(true)
         setError("")
+        setErrorDetail("")
         let response = null
         try {
             response = await getAllInterviewReports()
@@ -83,14 +125,10 @@ export const useInterview = () => {
                 setReports(response.interviewReports)
             } else {
                 setError("We couldn't load your saved plans. Please try again.")
+                setErrorDetail("Server returned no list")
             }
         } catch (err) {
-            const status = err?.response?.status
-            if (status === 401) {
-                setError("Your session expired. Please sign in again.")
-            } else {
-                setError("We couldn't reach the server. Check your connection, then retry.")
-            }
+            fail(err, "We couldn't load your saved plans.")
         } finally {
             setLoading(false)
         }
@@ -100,6 +138,7 @@ export const useInterview = () => {
 
     const getResumePdf = async (interviewReportId) => {
         setError("")
+        setErrorDetail("")
         setDownloading(true)
         try {
             const response = await generateResumePdf({ interviewReportId })
@@ -110,8 +149,8 @@ export const useInterview = () => {
             document.body.appendChild(link)
             link.click()
         }
-        catch (error) {
-            setError("We couldn't download the resume. The AI service may be busy — please try again.")
+        catch (err) {
+            fail(err, "We couldn't download the resume.")
         } finally {
             setDownloading(false)
         }
@@ -125,6 +164,6 @@ export const useInterview = () => {
         }
     }, [ interviewId ])
 
-    return { loading, downloading, report, reports, error, setError, generateReport, getReportById, getReports, getResumePdf }
+    return { loading, downloading, report, reports, error, errorDetail, setError, generateReport, getReportById, getReports, getResumePdf }
 
 }

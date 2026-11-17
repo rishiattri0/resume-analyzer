@@ -74,6 +74,7 @@ const Login = () => {
                     </button>
                 </form>
                 <p>Don't have an account? <Link to={"/register"} >Register</Link> </p>
+                <p className='build-tag'>Build {__BUILD_ID__}</p>
             </div>
         </main>
         </>

@@ -26,6 +26,11 @@ $severity-low: #4ade80;
     color: #fecaca;
     font-size: 0.78rem;
     line-height: 1.4;
+
+    &__detail {
+        opacity: 0.7;
+        font-size: 0.72rem;
+    }
 }
 
 .load-error {
@@ -58,6 +63,12 @@ $severity-low: #4ade80;
         .button {
             width: 100%;
         }
+    }
+
+    &__detail {
+        font-size: 0.75rem !important;
+        opacity: 0.65;
+        margin-bottom: 16px !important;
     }
 }
 

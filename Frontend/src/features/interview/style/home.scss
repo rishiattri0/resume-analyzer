@@ -312,7 +312,13 @@
   color: #fecaca;
   font-size: 0.9rem;
 
-  p { margin: 0; }
+  &__text p { margin: 0; }
+
+  &__detail {
+    margin-top: 6px !important;
+    font-size: 0.78rem;
+    color: rgba(254, 202, 202, 0.72);
+  }
 
   &__retry {
     flex-shrink: 0;

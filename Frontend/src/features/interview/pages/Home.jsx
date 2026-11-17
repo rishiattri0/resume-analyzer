@@ -7,7 +7,7 @@ import Navbar from '../../../components/Navbar.jsx'
 
 const Home = () => {
 
-    const { loading, generateReport, reports, error, getReports } = useInterview()
+    const { loading, generateReport, reports, error, errorDetail, getReports } = useInterview()
     const { handleLogout, user } = useAuth()
     const [ jobDescription, setJobDescription ] = useState("")
     const [ selfDescription, setSelfDescription ] = useState("")
@@ -69,7 +69,12 @@ const Home = () => {
 
             {(formError || error) && (
                 <div className='error-banner' role='alert'>
-                    <p>{formError || error}</p>
+                    <div className='error-banner__text'>
+                        <p>{formError || error}</p>
+                        {!formError && errorDetail && (
+                            <p className='error-banner__detail'>{errorDetail}</p>
+                        )}
+                    </div>
                     {!formError && (
                         <button type='button' className='error-banner__retry' onClick={() => getReports()}>Retry</button>
                     )}
@@ -194,6 +199,7 @@ const Home = () => {
                 <a href='#'>Privacy Policy</a>
                 <a href='#'>Terms of Service</a>
                 <a href='#'>Help Center</a>
+                <span className='build-tag'>Build {__BUILD_ID__}</span>
             </footer>
         </div>
         </>

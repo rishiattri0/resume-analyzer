@@ -35,11 +35,32 @@ app.use(cors({
     credentials: true
 }))
 
+// Request log so we can see exactly what a remote device sends and gets back.
+app.use((req, res, next) => {
+    const startedAt = Date.now()
+    res.on("finish", () => {
+        const entry = {
+            method: req.method,
+            path: req.originalUrl,
+            status: res.statusCode,
+            ms: Date.now() - startedAt,
+            country: req.headers["x-vercel-ip-country"] || "-",
+            ua: String(req.headers["user-agent"] || "-").slice(0, 48)
+        }
+        if (entry.status >= 400 || entry.path.startsWith("/api/interview") || entry.path === "/api/health") {
+            console.log("req", JSON.stringify(entry))
+        }
+    })
+    next()
+})
+
 app.get("/api/health", (req, res) => {
     res.json({
         ok: true,
         service: "interview-ai-backend",
         db: mongoose.connection.readyState === 1 ? "connected" : "connecting",
+        model: process.env.GEMINI_MODEL || "default",
+        region: process.env.VERCEL_REGION || "local",
         time: new Date().toISOString()
     })
 })
