@@ -17,26 +17,40 @@ function getAI() {
 
 const MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite"
 
-function isRetryableAiError(err) {
-    const code = err?.status || err?.code || err?.error?.code || ""
-    const message = String(err?.message || "")
-    return code === 503 || code === 429 || code === "UNAVAILABLE" || code === "RESOURCE_EXHAUSTED" ||
-        /high demand|overloaded|temporar|try again/i.test(message)
+// Gemini occasionally returns 503 "high demand" for a single model. Falling back
+// to another model keeps report generation working instead of failing outright.
+const FALLBACK_MODELS = (process.env.GEMINI_FALLBACK_MODELS || "gemini-3.5-flash,gemini-flash-latest,gemini-2.5-flash")
+    .split(",")
+    .map((model) => model.trim())
+    .filter(Boolean)
+
+const MODEL_CANDIDATES = [ ...new Set([ MODEL, ...FALLBACK_MODELS ]) ]
+const ATTEMPTS_PER_MODEL = 2
+const TIME_BUDGET_MS = 45000
+
+function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-async function generateWithRetry(request, attempts = 3) {
+async function generateWithFallback(request) {
+    const startedAt = Date.now()
     let lastError
-    for (let i = 0; i < attempts; i++) {
-        try {
-            return await getAI().models.generateContent(request)
-        } catch (err) {
-            lastError = err
-            if (i === attempts - 1 || !isRetryableAiError(err)) {
-                throw err
+
+    for (const model of MODEL_CANDIDATES) {
+        for (let attempt = 0; attempt < ATTEMPTS_PER_MODEL; attempt++) {
+            try {
+                return await getAI().models.generateContent({ ...request, model })
+            } catch (err) {
+                lastError = err
+                console.error(`Gemini request failed (${model}, attempt ${attempt + 1}):`, err?.message || err)
+                if (Date.now() - startedAt > TIME_BUDGET_MS) {
+                    throw err
+                }
+                await sleep(1000 * (attempt + 1))
             }
-            await new Promise((resolve) => setTimeout(resolve, 1500 * (i + 1)))
         }
     }
+
     throw lastError
 }
 
@@ -74,8 +88,7 @@ async function generateInterviewReport({ resume, selfDescription, jobDescription
                         Include at least 5 days in the preparation plan.
 `
 
-    const response = await generateWithRetry({
-        model: MODEL,
+    const response = await generateWithFallback({
         contents: prompt,
         config: {
             responseMimeType: "application/json",
@@ -141,8 +154,7 @@ async function generateResumePdf({ resume, selfDescription, jobDescription }) {
                         The resume should not be so lengthy, it should ideally be 1-2 pages long when converted to PDF. Focus on quality rather than quantity and make sure to include all the relevant information that can increase the candidate's chances of getting an interview call for the given job description.
                     `
 
-    const response = await generateWithRetry({
-        model: MODEL,
+    const response = await generateWithFallback({
         contents: prompt,
         config: {
             responseMimeType: "application/json",
