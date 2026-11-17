@@ -35,7 +35,8 @@ const Home = () => {
             return
         }
         if (resumeFile) {
-            if (!/\.pdf$/i.test(resumeFile.name)) {
+            const isPdf = /\.pdf$/i.test(resumeFile.name) || resumeFile.type === "application/pdf"
+            if (!isPdf) {
                 setFormError("Please upload your resume as a PDF file.")
                 return
             }
